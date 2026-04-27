@@ -1,0 +1,33 @@
+<div class="toolbar card-surface">
+  <div>
+    <label for="guildSearch">Search Guild</label>
+    <input id="guildSearch" placeholder="พิมพ์ชื่อเซิร์ฟเวอร์ หรือ Guild ID" />
+  </div>
+  <div>
+    <label for="guildFilter">Filter</label>
+    <select id="guildFilter">
+      <option value="all">ทั้งหมด</option>
+      <option value="has-notify">มี Notify Channel</option>
+      <option value="exempt-on">Exempt Guild เปิดอยู่</option>
+      <option value="need-setup">ยังไม่ตั้งค่า Notify</option>
+    </select>
+  </div>
+  <div>
+    <label for="inviteHubSelect">Invite Hub Channel Name</label>
+    <select id="inviteHubSelect">
+      <option value="">-- เลือกห้องจากชื่อ --</option>
+      {% if rows and rows[0].channel_options %}
+        {% for ch in rows[0].channel_options %}
+        <option value="{{ ch.id }}" {% if invite_hub_channel_id == ch.id %}selected{% endif %}>#{{ ch.name }} ({{ ch.id }})</option>
+        {% endfor %}
+      {% endif %}
+    </select>
+  </div>
+  <div class="toolbar-actions">
+    <button type="button" class="btn btn-teal" id="copyInviteHubBtn">Copy Invite Hub ID</button>
+    <button type="button" class="btn btn-gray" id="clearFilterBtn">Clear</button>
+  </div>
+  <div class="toolbar-note">
+    ปุ่ม Copy จะคัดลอก Channel ID ที่เลือกไว้โดยอัตโนมัติ เพื่อนำไปใส่ `INVITE_HUB_CHANNEL_ID` ได้ทันที
+  </div>
+</div>

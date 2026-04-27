@@ -1,0 +1,66 @@
+<form
+  class="guild-card card-surface"
+  method="post"
+  action="{{ url_for('dashboard.save') }}"
+  data-guild-name="{{ row.guild_name | lower }}"
+  data-guild-id="{{ row.guild_id }}"
+  data-has-notify="{{ '1' if row.notify_channel_id else '0' }}"
+  data-exempt-guild="{{ '1' if row.exempt_guild else '0' }}"
+>
+  <h3>{{ row.guild_name }} ({{ row.guild_id }})</h3>
+  <p class="subtext">ปรับค่าฝั่งนี้ได้ทันที ไม่ต้องจำเลข ID เอง</p>
+  <input type="hidden" name="guild_id" value="{{ row.guild_id }}" />
+
+  <div class="three-col-grid">
+    <div>
+      <label>Notify Channel</label>
+      <select name="notify_channel_id">
+        <option value="">-- ไม่ตั้งค่า --</option>
+        {% for ch in row.channel_options %}
+        <option value="{{ ch.id }}" {% if row.notify_channel_id == ch.id %}selected{% endif %}>#{{ ch.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label>Join Here Channel</label>
+      <select name="join_here_channel_name">
+        <option value="">-- ไม่ตั้งค่า --</option>
+        {% for ch in row.channel_options %}
+        <option value="{{ ch.name }}" {% if row.join_here_channel_name == ch.name %}selected{% endif %}>#{{ ch.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label>Guild Exempt</label>
+      <label class="checkbox-inline">
+        <input type="checkbox" name="exempt_guild" {% if row.exempt_guild %}checked{% endif %} />
+        <span>ยกเว้นทั้งเซิร์ฟเวอร์จากลิงก์ฟิลเตอร์</span>
+      </label>
+    </div>
+  </div>
+
+  <div class="channel-section">
+    <label>Exempt Channels</label>
+    <div class="channel-tools">
+      <button type="button" class="btn btn-teal btn-small select-all-btn">เลือกทั้งหมด</button>
+      <button type="button" class="btn btn-gray btn-small clear-all-btn">ล้างทั้งหมด</button>
+      <span class="tool-count">เลือกแล้ว <span class="selected-count">0</span> ห้อง</span>
+    </div>
+    <div class="channel-list">
+      {% for ch in row.channel_options %}
+      <label class="channel-item">
+        <input
+          type="checkbox"
+          name="exempt_channel_ids"
+          value="{{ ch.id }}"
+          {% if ch.id in row.selected_exempt_channels %}checked{% endif %}
+        />
+        <span>#{{ ch.name }}</span>
+      </label>
+      {% endfor %}
+    </div>
+    <p class="hint">ติ๊กเลือกหลายห้องได้เลย (ไม่ต้องใส่เลข ID)</p>
+  </div>
+
+  <button type="submit" class="btn btn-primary">Save</button>
+</form>

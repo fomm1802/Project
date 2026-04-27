@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}Bot Dashboard{% endblock %}
+{% block body_class %}dashboard-page{% endblock %}
+
+{% block page_styles %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard-page.css') }}" />
+{% endblock %}
+
+{% block content %}
+  <header class="page-header">
+    <div>
+      <h1>Bot Dashboard</h1>
+      <div class="status-badge">Bot: {{ bot_user }} | Ready: {{ bot_ready }}</div>
+    </div>
+    <form method="post" action="{{ url_for('dashboard.logout') }}">
+      <button class="btn btn-gray" type="submit">Logout</button>
+    </form>
+  </header>
+
+  <section class="help-box">
+    ใช้งาน 3 ขั้นตอน: 1) ค้นหาเซิร์ฟเวอร์ 2) เลือกค่าจาก dropdown/checkbox 3) กด Save
+  </section>
+  {% if saved %}
+    <section class="success-box">บันทึกค่าระบบสำเร็จแล้ว</section>
+  {% endif %}
+
+  {% include "partials/dashboard_toolbar.html" %}
+
+  <section class="guild-list" id="guildGrid">
+    {% for row in rows %}
+      {% include "partials/guild_card.html" %}
+    {% endfor %}
+  </section>
+
+  <div id="emptyState" class="empty-state" style="display:none;">
+    ไม่พบ Guild ที่ตรงกับเงื่อนไขค้นหา
+  </div>
+{% endblock %}
+
+{% block page_scripts %}
+  <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}
