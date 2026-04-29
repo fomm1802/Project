@@ -49,12 +49,13 @@ app = create_web_app(
 
 
 def run_flask():
-    port = int(os.getenv("WEBHOOK_PORT", 12214))
+    # Prefer platform-provided PORT (Render/Wispbyte style), then WEBHOOK_PORT fallback.
+    port = int(os.getenv("PORT") or os.getenv("WEBHOOK_PORT") or 12214)
 
     try:
         from waitress import serve
 
-        logger.info(f"🌐 Starting dashboard/webhook server with Waitress on :{port}")
+        logger.info(f"🌐 Starting dashboard/webhook server on 0.0.0.0:{port} (Waitress)")
         serve(app, host="0.0.0.0", port=port, threads=8)
         return
     except Exception:
