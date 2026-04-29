@@ -26,12 +26,6 @@ load_dotenv()
 raw = os.getenv("GITHUB_TOKEN")
 GITHUB_TOKEN = (raw or "").strip().replace("\ufeff", "")
 
-print("======== ENV DEBUG ========")
-print("WORKING DIR :", os.getcwd())
-print(".env token loaded :", bool(GITHUB_TOKEN))
-print("TOKEN LENGTH :", len(GITHUB_TOKEN))
-print("===========================")
-
 
 # ---------- Logging ----------
 coloredlogs.install(
@@ -55,15 +49,20 @@ app = create_web_app(
 
 
 def run_flask():
-    port = int(os.getenv("WEBHOOK_PORT", 12214))
-    logging.getLogger("werkzeug").setLevel(logging.ERROR)
+    # Prefer platform-provided PORT (Render/Wispbyte style), then WEBHOOK_PORT fallback.
+    port = int(os.getenv("PORT") or os.getenv("WEBHOOK_PORT") or 12214)
 
-    app.run(
-        host="0.0.0.0",
-        port=port,
-        debug=False,
-        use_reloader=False
-    )
+    try:
+        from waitress import serve
+
+        logger.info(f"🌐 Starting dashboard/webhook server on 0.0.0.0:{port} (Waitress)")
+        serve(app, host="0.0.0.0", port=port, threads=8)
+        return
+    except Exception:
+        logger.warning("⚠️ Waitress unavailable, fallback to Flask built-in server")
+
+    logging.getLogger("werkzeug").setLevel(logging.ERROR)
+    app.run(host="0.0.0.0", port=port, debug=False, use_reloader=False)
 
 
 # ---------- Bot Presence Status ----------
@@ -161,8 +160,13 @@ class MyBot(commands.AutoShardedBot):
 
         await async_full_sync()
 
-        for g in self.guilds:
-            await async_get_server_config(g.id)
+        semaphore = asyncio.Semaphore(20)
+
+        async def warmup_config(gid: int):
+            async with semaphore:
+                await async_get_server_config(gid)
+
+        await asyncio.gather(*(warmup_config(g.id) for g in self.guilds))
 
         logger.info("✅ Config sync เรียบร้อย")
 
