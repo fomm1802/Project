@@ -4,6 +4,8 @@ import time
 import base64
 import logging
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 import asyncio
 from typing import Dict, Any
 from dotenv import dotenv_values
@@ -45,6 +47,12 @@ GITHUB_TOKEN = RAW_TOKEN if RAW_TOKEN else None
 
 
 LOCAL_CACHE: dict[str, dict] = {}
+
+HTTP_TIMEOUT = (5, 20)
+SESSION = requests.Session()
+SESSION.headers.update({"Accept": "application/vnd.github+json"})
+SESSION.mount("https://", HTTPAdapter(max_retries=Retry(total=3, backoff_factor=0.4, status_forcelist=[429,500,502,503,504], allowed_methods=["GET", "PUT"])))
+
 REMOTE_SHA: dict[str, str] = {}
 LAST_SYNC: dict[str, float] = {}
 
@@ -53,12 +61,9 @@ LAST_SYNC: dict[str, float] = {}
 
 def _headers():
     if not GITHUB_TOKEN:
-        return { "Accept": "application/vnd.github+json" }
+        return {}
 
-    return {
-        "Authorization": f"Bearer {GITHUB_TOKEN}",
-        "Accept": "application/vnd.github+json",
-    }
+    return {"Authorization": f"Bearer {GITHUB_TOKEN}"}
 
 
 def _file_url(gid: str):
@@ -116,7 +121,7 @@ def _fetch_remote(gid: str):
         return None
 
     url = _file_url(gid)
-    r = requests.get(url, headers=_headers(), timeout=15)
+    r = SESSION.get(url, headers=_headers(), timeout=HTTP_TIMEOUT)
 
     # error cases
     if r.status_code == 404:
@@ -199,7 +204,7 @@ def save_server_config(gid: int | str, conf: Dict[str, Any]):
     if gid in REMOTE_SHA:
         payload["sha"] = REMOTE_SHA[gid]
 
-    r = requests.put(_file_url(gid), headers=_headers(), json=payload, timeout=20)
+    r = SESSION.put(_file_url(gid), headers=_headers(), json=payload, timeout=HTTP_TIMEOUT)
 
     if r.status_code in (200, 201):
         REMOTE_SHA[gid] = r.json()["content"]["sha"]
@@ -234,7 +239,7 @@ def full_sync():
         logging.info("ℹ️ Local-Only Mode — full_sync ข้าม")
         return
 
-    r = requests.get(_folder_url(), headers=_headers(), timeout=20)
+    r = SESSION.get(_folder_url(), headers=_headers(), timeout=HTTP_TIMEOUT)
 
     if r.status_code == 404:
         logging.error("❌ ไม่พบโฟลเดอร์ configs บน GitHub")
@@ -280,7 +285,7 @@ def check_github_token():
         logging.info("ℹ️ ไม่มี GITHUB_TOKEN — Local Mode")
         return False
 
-    r = requests.get(_folder_url(), headers=_headers(), timeout=10)
+    r = SESSION.get(_folder_url(), headers=_headers(), timeout=HTTP_TIMEOUT)
 
     if r.status_code == 200:
         logging.info("✅ GITHUB_TOKEN ใช้งานได้ (configs folder OK)")

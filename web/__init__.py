@@ -2,6 +2,7 @@ import os
 from typing import Callable, Optional
 
 from flask import Flask
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from .api import create_api_blueprint
 from .dashboard import create_dashboard_blueprint
@@ -20,6 +21,13 @@ def create_web_app(
         static_folder="../static",
     )
     app.secret_key = os.getenv("DASHBOARD_SECRET_KEY", "").strip() or os.urandom(32)
+    app.config["SESSION_COOKIE_HTTPONLY"] = True
+    app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+    app.config["SESSION_COOKIE_SECURE"] = os.getenv("SESSION_COOKIE_SECURE", "true").lower() in ("1", "true", "yes", "on")
+
+    trust_proxy = os.getenv("TRUST_PROXY", "true").lower() in ("1", "true", "yes", "on")
+    if trust_proxy:
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
     app.register_blueprint(create_api_blueprint(get_bot))
     app.register_blueprint(create_dashboard_blueprint(get_bot, dashboard_password))
