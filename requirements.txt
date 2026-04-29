@@ -7,3 +7,4 @@ pytz==2025.1
 coloredlogs==15.0.1
 pillow==11.2.1
 psutil==5.9.5
+waitress==3.0.2
