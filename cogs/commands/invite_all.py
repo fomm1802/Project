@@ -2,6 +2,7 @@ import os
 import time
 import asyncio
 import datetime
+from io import BytesIO
 import discord
 from discord.ext import commands, tasks
 from discord import app_commands
@@ -47,9 +48,20 @@ class InviteRefreshButton(discord.ui.View):
     )
     async def copy_all(self, interaction: discord.Interaction, button: discord.ui.Button):
 
+        text = self.invites_text or "(ไม่มีข้อมูล invite)"
+
+        if len(text) <= 1800:
+            await interaction.response.send_message(
+                f"📨 **รายการ Invite ทั้งหมด**\n```\n{text}\n```",
+                ephemeral=True
+            )
+            return
+
+        file_buffer = BytesIO(text.encode("utf-8"))
         await interaction.response.send_message(
-            f"📨 **รายการ Invite ทั้งหมด**\n```\n{self.invites_text}\n```",
-            ephemeral=True
+            "📨 รายการ Invite ยาวเกินข้อความ Discord — ส่งเป็นไฟล์แทน",
+            ephemeral=True,
+            file=discord.File(file_buffer, filename="invite-list.txt")
         )
 
 
@@ -89,7 +101,7 @@ class InviteSender(commands.Cog):
                 guild.system_channel
                 or next(
                     (c for c in guild.text_channels
-                     if c.permissions_for(guild.me).create_instant_invite),
+                     if guild.me and c.permissions_for(guild.me).create_instant_invite),
                     None
                 )
             )
@@ -160,11 +172,16 @@ class InviteSender(commands.Cog):
             success = 0
             failed = 0
 
-            # เรียงชื่อเซิร์ฟเวอร์ A→Z
-            for guild in sorted(self.bot.guilds, key=lambda g: g.name.lower()):
+            sorted_guilds = sorted(self.bot.guilds, key=lambda g: g.name.lower())
+            semaphore = asyncio.Semaphore(5)
 
-                result = await self.create_invite_for_guild(guild)
+            async def fetch_invite(guild: discord.Guild):
+                async with semaphore:
+                    return await self.create_invite_for_guild(guild)
 
+            results = await asyncio.gather(*(fetch_invite(guild) for guild in sorted_guilds))
+
+            for result in results:
                 if result:
                     name, link = result
                     invite_infos.append((name, link))
@@ -172,8 +189,6 @@ class InviteSender(commands.Cog):
                     success += 1
                 else:
                     failed += 1
-
-                await asyncio.sleep(0.2)
 
             ts = datetime.datetime.now().strftime("%d/%m/%Y %H:%M")
 
