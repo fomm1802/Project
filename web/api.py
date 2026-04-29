@@ -5,7 +5,11 @@ from flask import Blueprint, jsonify
 
 
 def create_api_blueprint(get_bot: Callable[[], Optional[object]]) -> Blueprint:
-    bp = Blueprint("api", __name__)
+    bp = Blueprint("api", __name__, url_prefix="/api")
+
+    @bp.get("/healthz")
+    def healthz():
+        return jsonify({"ok": True}), 200
 
     @bp.get("/")
     def index():
